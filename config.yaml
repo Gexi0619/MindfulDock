@@ -1,0 +1,44 @@
+global_settings:
+  output_dir: "/home/sungexiplay/test"
+  yt-dlp:
+    options:
+      - "--write-sub"
+      - "--write-auto-sub"
+      - "--sub-lang"
+      - "en"
+      - "-f"
+      - "'bestvideo[height=720]+bestaudio[abr<=64]'"
+      - "--merge-output-format"
+      - "mp4"
+      - "--match-filter"
+      - "'!is_live'"
+      - "--playlist-start"
+      - "1"
+      - "--playlist-end"
+      - "2"
+      - "--output"
+      - "'%(upload_date)s - %(title)s - %(id)s.%(ext)s'"
+
+sources:
+  - name: "MiAnZhuiZong"
+    url: "https://www.youtube.com/@MiAnZhuiZong"
+    type: "yt-dlp"
+    custom_settings:
+      yt-dlp:
+        options:
+          - "-f"
+          - "'bestvideo[height=720]+bestaudio[abr<=64]'"
+          - "--merge-output-format"
+          - "mp4"
+          - "--match-filter"
+          - "'!is_live'"
+          - "--playlist-start"
+          - "1"
+          - "--playlist-end"
+          - "2"
+          - "--output"
+          - "'%(upload_date)s - %(title)s - %(id)s.%(ext)s'"
+
+  - name: "jvscholz"
+    url: "https://www.youtube.com/@jvscholz"
+    type: "yt-dlp"
