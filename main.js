@@ -1,77 +1,47 @@
 const fs = require('fs-extra');
-const { exec } = require('child_process');
-const yaml = require('yaml');
+const { execFile } = require('child_process');
 
-// 加载 YAML 配置文件
-function loadConfig(configPath) {
-    const fileContent = fs.readFileSync(configPath, 'utf8');
-    return yaml.parse(fileContent);
+// 加载 JSON 配置
+const config = require('./config.json');
+
+// 构造 yt-dlp 命令
+function buildCommand(source, globalSettings) {
+    const outputDir = globalSettings.output_dir || './downloads';
+    const options = [
+        ...globalSettings['yt-dlp']?.options || [],
+        ...source.custom_settings?.['yt-dlp']?.options || [],
+        '--output', `${outputDir}/${source.name}/%(upload_date)s - %(title)s - %(id)s.%(ext)s`
+    ];
+    return ['yt-dlp', source.url, ...options];
 }
 
-// 下载逻辑
-function downloadContent(source, globalSettings) {
+// 执行命令
+function runCommand(command) {
     return new Promise((resolve, reject) => {
-        const sourceType = source.type;
-        const url = source.url;
-        const outputDir = globalSettings.output_dir || './downloads';
-
-        // 合并全局设置和自定义设置
-        const globalOptions = globalSettings[sourceType]?.options || [];
-        const customOptions = source.custom_settings?.[sourceType]?.options || [];
-        const options = [...globalOptions, ...customOptions];
-
-        // 确保输出目录存在
-        const sourceOutputDir = `${outputDir}/${source.name}`;
-        fs.ensureDirSync(sourceOutputDir);
-
-        // 修正 --output 参数，使用双引号包裹
-        const outputPath = `${sourceOutputDir}/%(upload_date)s - %(title)s - %(id)s.%(ext)s`;
-        options.push("--output", `"${outputPath}"`);
-
-        // 构造命令
-        const safeOptions = options.map(opt =>
-            opt.includes(' ') && !opt.startsWith('"') ? `"${opt}"` : opt // 包裹空格参数
-        );
-        const command = `yt-dlp ${url} ${safeOptions.join(' ')}`;
-        console.log(`Running command: ${command}`);
-
-        // 执行命令
-        const process = exec(command, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error downloading ${source.name}:`, stderr);
-                return reject(error);
-            }
-            console.log(`Downloaded ${source.name} successfully:\n`, stdout);
+        console.log(`Running command: ${command.join(' ')}`);
+        const process = execFile(command[0], command.slice(1), (error, stdout, stderr) => {
+            if (error) return reject(stderr);
+            console.log(stdout);
             resolve(stdout);
         });
-
-        // 实时输出日志
         process.stdout.on('data', (data) => console.log(data));
         process.stderr.on('data', (data) => console.error(data));
     });
 }
 
-
-
 // 主函数
 async function main() {
-    try {
-        const config = loadConfig('./config.yaml');
-        const globalSettings = config.global_settings || {};
-        const sources = config.sources || [];
-
-        for (const source of sources) {
-            try {
-                await downloadContent(source, globalSettings);
-            } catch (error) {
-                console.error(`Failed to download ${source.name}:`, error.message);
-            }
+    const { global_settings: globalSettings, sources } = config;
+    for (const source of sources) {
+        try {
+            const command = buildCommand(source, globalSettings);
+            await runCommand(command);
+            console.log(`Downloaded ${source.name} successfully.`);
+        } catch (error) {
+            console.error(`Failed to download ${source.name}: ${error}`);
         }
-
-        console.log('All downloads completed.');
-    } catch (error) {
-        console.error('Error:', error.message);
     }
+    console.log('All downloads completed.');
 }
 
-main();
+main().catch((err) => console.error(`Critical Error: ${err}`));
