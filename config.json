@@ -10,7 +10,7 @@
           "--merge-output-format", "mp4",
           "--match-filter", "!is_live",
           "--playlist-start", "1",
-          "--playlist-end", "2"
+          "--playlist-end", "1"
         ]
       }
     },
@@ -25,7 +25,7 @@
               "--merge-output-format", "mp4",
               "--match-filter", "!is_live",
               "--playlist-start", "1",
-              "--playlist-end", "2"
+              "--playlist-end", "1"
             ]
           }
         }
@@ -33,6 +33,14 @@
       {
         "name": "jvscholz",
         "url": "https://www.youtube.com/@jvscholz"
+      },
+      {
+        "name": "aram",
+        "url": "https://www.youtube.com/@AramTraining"
+      },
+      {
+        "name": "travis",
+        "url": "https://www.youtube.com/@TravisGardner"
       }
     ]
   }
