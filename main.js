@@ -121,9 +121,12 @@ function printVideos(title, videos) {
 
 
 
+
 // 主函数
 async function main() {
     const { global_settings: globalSettings, sources } = config;
+    const args = process.argv.slice(2); // 获取命令行参数
+    const printOnly = args.includes('--print-only'); // 检查是否传入 `--print-only`
 
     try {
         // 获取本地已下载的视频信息
@@ -164,24 +167,30 @@ async function main() {
             console.log(`- Videos to download: ${videosToDownload.length}`);
 
             // 打印待下载的视频列表
-            if (videosToDownload.length > 0) {
-                printVideos(`To-download Videos for ${source.name}`, videosToDownload);
-            }
+            printVideos(`Local Videos for ${source.name}`, localVideos[source.name] || []);
+            printVideos(`Remote Videos for ${source.name}`, remoteVideos);
+            printVideos(`To-download Videos for ${source.name}`, videosToDownload);
         }
 
-        // 阶段 2：下载 `to-download` 列表中的视频
-        for (const source of sources) {
-            const videosToDownload = videosToDownloadBySource[source.name] || [];
-            for (const video of videosToDownload) {
-                const command = buildDownloadCommand(source, globalSettings, video.id);
-                await downloadVideo(command);
-                console.log(`Downloaded: ${video.title} (ID: ${video.id})`);
+        // 阶段 2：下载 `to-download` 列表中的视频（仅当未指定 `--print-only` 时）
+        if (!printOnly) {
+            for (const source of sources) {
+                const videosToDownload = videosToDownloadBySource[source.name] || [];
+                for (const video of videosToDownload) {
+                    const command = buildDownloadCommand(source, globalSettings, video.id);
+                    await downloadVideo(command);
+                    console.log(`Downloaded: ${video.title} (ID: ${video.id})`);
+                }
             }
+        } else {
+            console.log("\n--print-only specified. Skipping downloads.");
         }
     } catch (error) {
         console.error('Error:', error);
     }
 }
+
+
 
 
 
