@@ -84,7 +84,7 @@ function buildDownloadCommand(source, globalSettings, videoId) {
         ...globalSettings['yt-dlp']?.options || [],
         ...source.custom_settings?.['yt-dlp']?.options || [],
         '--output', `${outputDir}/${source.name}/%(upload_date)s - %(title)s - %(id)s.%(ext)s`,
-        '--id', videoId // 指定要下载的视频 ID
+        '--', videoId // 指定要下载的视频 ID
     ];
     return ['yt-dlp', ...options];
 }
