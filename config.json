@@ -1,6 +1,6 @@
 {
     "global_settings": {
-      "output_dir": "/home/sungexiplay/test",
+      "output_dir": "/home/sungexi/Sambashare",
       "yt-dlp": {
         "options": [
           "--write-sub",

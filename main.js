@@ -7,7 +7,7 @@ const config = require('./config.json');
 
 // 提取文件名中的 title 和 id
 function extractInfoFromFilename(filename) {
-    const regex = /^(?<upload_date>\d{8}) - (?<title>.+?) - (?<id>.+?)\..+$/;
+    const regex = /^(?<upload_date>\d{8}) - (?<title>.+?) - (?<id>.{11})\.[^.]+$/;
     const match = filename.match(regex);
     if (match && match.groups) {
         return {
