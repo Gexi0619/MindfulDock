@@ -45,7 +45,7 @@ async function getRemoteVideos(source, globalSettings) {
     const options = [
         ...globalSettings['yt-dlp']?.options || [],
         ...source.custom_settings?.['yt-dlp']?.options || [],
-        '--print', '%(id)s\t%(title)s\t%(upload_date)s\t%(duration_string)s'
+        '--flat-playlist', '--print', '%(id)s\t%(title)s'
     ];
     const command = ['yt-dlp', source.url, ...options];
 
@@ -67,14 +67,15 @@ async function getRemoteVideos(source, globalSettings) {
                 reject(`Command failed with exit code ${code}`);
             } else {
                 const remoteVideos = stdout.split('\n').filter(Boolean).map(line => {
-                    const [id, title, upload_date, duration] = line.split('\t');
-                    return { id, title, upload_date, duration };
+                    const [id, title] = line.split('\t');
+                    return { id, title };
                 });
                 resolve(remoteVideos);
             }
         });
     });
 }
+
 
 // 构造下载命令
 function buildDownloadCommand(source, globalSettings, videoId) {
@@ -83,10 +84,11 @@ function buildDownloadCommand(source, globalSettings, videoId) {
         ...globalSettings['yt-dlp']?.options || [],
         ...source.custom_settings?.['yt-dlp']?.options || [],
         '--output', `${outputDir}/${source.name}/%(upload_date)s - %(title)s - %(id)s.%(ext)s`,
-        '--match-filter', `id=${videoId}`
+        '--id', videoId // 指定要下载的视频 ID
     ];
-    return ['yt-dlp', source.url, ...options];
+    return ['yt-dlp', ...options];
 }
+
 
 // 执行下载命令并展示实时输出
 async function downloadVideo(command) {
@@ -107,12 +109,17 @@ async function downloadVideo(command) {
 // 打印指定的视频列表
 function printVideos(title, videos, showDuration = false) {
     console.log(`\n${title}:`);
+    if (videos.length === 0) {
+        console.log('  (No videos)');
+        return;
+    }
     videos.forEach(video => {
         const date = video.upload_date || 'Unknown Date';
         const duration = showDuration ? `, Duration: ${video.duration || 'Unknown'}` : '';
         console.log(`- ID: ${video.id}, Title: ${video.title}, Date: ${date}${duration}`);
     });
 }
+
 
 // 主函数
 async function main() {
@@ -125,7 +132,7 @@ async function main() {
         // 用于存储所有需要下载的视频
         const videosToDownloadBySource = {};
 
-        // 第一阶段：分析所有频道的 `to-download` 列表
+        // 阶段 1：分析所有频道的 `to-download` 列表
         for (const source of sources) {
             console.log(`\nProcessing source: ${source.name}`);
 
@@ -137,16 +144,17 @@ async function main() {
                 (localVideos[source.name] || []).map(video => video.id)
             );
 
-            // 筛选真正需要下载的视频
+            // 筛选需要下载的视频
             const videosToDownload = remoteVideos.filter(video => !localVideoIds.has(video.id));
             videosToDownloadBySource[source.name] = videosToDownload;
 
-            // 打印 `remote` 和 `to-download` 列表
+            // 打印远程、本地和待下载视频列表
+            printVideos(`Local Videos for ${source.name}`, localVideos[source.name] || []);
             printVideos(`Remote Videos for ${source.name}`, remoteVideos);
-            printVideos(`Videos to Download for ${source.name}`, videosToDownload, true);
+            printVideos(`Videos to Download for ${source.name}`, videosToDownload);
         }
 
-        // 第二阶段：统一下载所有 `to-download` 的视频
+        // 阶段 2：下载 `to-download` 列表中的视频
         for (const source of sources) {
             const videosToDownload = videosToDownloadBySource[source.name] || [];
             for (const video of videosToDownload) {
@@ -159,5 +167,6 @@ async function main() {
         console.error('Error:', error);
     }
 }
+
 
 main().catch(err => console.error(`Critical Error: ${err}`));

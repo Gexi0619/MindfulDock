@@ -10,7 +10,7 @@
           "--merge-output-format", "mp4",
           "--match-filters", "!is_live & !was_live",
           "--playlist-start", "1",
-          "--playlist-end", "1000"
+          "--playlist-end", "5"
         ]
       }
     },
