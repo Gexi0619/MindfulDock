@@ -1,6 +1,8 @@
 const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
+const chalk = require('chalk');
+
 
 // 加载 JSON 配置
 const config = require('./config.json');
@@ -119,6 +121,28 @@ function printVideos(title, videos) {
     });
 }
 
+function printStatistics(title, stats) {
+    console.log(`\n${chalk.blue.bold(title)}`);
+    console.log(chalk.gray('───────────────────────────────────────────────'));
+    console.log(`${chalk.green('✔')} Total local videos: ${chalk.yellow(stats.totalLocalVideos)}`);
+    console.log(`${chalk.green('✔')} Total remote videos: ${chalk.yellow(stats.totalRemoteVideos)}`);
+    console.log(`${chalk.green('✔')} Videos in both local and remote: ${chalk.yellow(stats.matchedVideosCount)}`);
+    console.log(`${chalk.red('❌')} Videos only in local: ${chalk.yellow(stats.onlyLocalVideosCount)}`);
+    console.log(`${chalk.green('→')} Videos to download: ${chalk.yellow(stats.toDownloadCount)}`);
+}
+
+function printVideos(title, videos) {
+    console.log(`\n${chalk.magenta.bold(title)}`);
+    if (videos.length === 0) {
+        console.log(`  ${chalk.green('✔')} No videos to download.`);
+        return;
+    }
+    console.log(chalk.gray('───────────────────────────────────────────────'));
+    videos.forEach((video, index) => {
+        const date = video.upload_date || 'Unknown Date';
+        console.log(`  ${chalk.yellow(`#${index + 1}`)} ID: ${chalk.cyan(video.id)} | Title: ${chalk.green(video.title)} | Date: ${chalk.blue(date)}`);
+    });
+}
 
 
 // 主函数
@@ -129,12 +153,8 @@ async function main() {
         // 获取本地已下载的视频信息
         const localVideos = await getLocalVideos(globalSettings, sources);
 
-        // 用于存储所有需要下载的视频
-        const videosToDownloadBySource = {};
-
-        // 阶段 1：分析所有频道的统计信息
         for (const source of sources) {
-            console.log(`\nProcessing source: ${source.name}`);
+            console.log(`\n${chalk.bold.underline(`Processing source: ${source.name}`)}`);
 
             // 获取远程需要下载的视频信息
             const remoteVideos = await getRemoteVideos(source, globalSettings);
@@ -146,42 +166,44 @@ async function main() {
             const remoteVideoIds = new Set(remoteVideos.map(video => video.id));
 
             // 统计信息
-            const totalLocalVideos = localVideoIds.size;
-            const totalRemoteVideos = remoteVideoIds.size;
-            const matchedVideosCount = Array.from(localVideoIds).filter(id => remoteVideoIds.has(id)).length;
-            const onlyLocalVideosCount = totalLocalVideos - matchedVideosCount;
+            const stats = {
+                totalLocalVideos: localVideoIds.size,
+                totalRemoteVideos: remoteVideoIds.size,
+                matchedVideosCount: Array.from(localVideoIds).filter(id => remoteVideoIds.has(id)).length,
+                onlyLocalVideosCount: localVideoIds.size - Array.from(localVideoIds).filter(id => remoteVideoIds.has(id)).length,
+                toDownloadCount: remoteVideos.filter(video => !localVideoIds.has(video.id)).length
+            };
 
             // 筛选需要下载的视频
             const videosToDownload = remoteVideos.filter(video => !localVideoIds.has(video.id));
-            videosToDownloadBySource[source.name] = videosToDownload;
 
-            // 打印统计信息
-            console.log(`Statistics for ${source.name}:`);
-            console.log(`- Total local videos: ${totalLocalVideos}`);
-            console.log(`- Total remote videos: ${totalRemoteVideos}`);
-            console.log(`- Videos in both local and remote: ${matchedVideosCount}`);
-            console.log(`- Videos only in local: ${onlyLocalVideosCount}`);
-            console.log(`- Videos to download: ${videosToDownload.length}`);
+            // 打印统计信息和待下载视频
+            printStatistics(`Statistics for ${source.name}`, stats);
+            printVideos(`Videos to Download for ${source.name}`, videosToDownload);
 
-            // 打印待下载的视频列表
+            // 实际下载 `to-download` 视频
             if (videosToDownload.length > 0) {
-                printVideos(`To-download Videos for ${source.name}`, videosToDownload);
-            }
-        }
-
-        // 阶段 2：下载 `to-download` 列表中的视频
-        for (const source of sources) {
-            const videosToDownload = videosToDownloadBySource[source.name] || [];
-            for (const video of videosToDownload) {
-                const command = buildDownloadCommand(source, globalSettings, video.id);
-                await downloadVideo(command);
-                console.log(`Downloaded: ${video.title} (ID: ${video.id})`);
+                console.log(`\n${chalk.green('Starting downloads...')}`);
+                for (const video of videosToDownload) {
+                    const command = buildDownloadCommand(source, globalSettings, video.id);
+                    try {
+                        await downloadVideo(command);
+                        console.log(`${chalk.green('✔')} Downloaded: ${chalk.cyan(video.title)} (ID: ${chalk.yellow(video.id)})`);
+                    } catch (error) {
+                        console.error(`${chalk.red('✖')} Failed to download: ${chalk.cyan(video.title)} (ID: ${chalk.yellow(video.id)})`);
+                        console.error(error);
+                    }
+                }
+            } else {
+                console.log(`${chalk.blue('No videos to download for this source.')}`);
             }
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error(chalk.red('Error:'), error);
     }
 }
+
+
 
 
 
