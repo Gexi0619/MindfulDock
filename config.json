@@ -6,9 +6,9 @@
           "--write-sub",
           "--write-auto-sub",
           "--sub-lang", "en",
+          "--match-filter", "original_url!~=/shorts/ & is_live != true & was_live != true",
           "-f", "bestvideo[height=720]+bestaudio[abr<=64]",
-          "--merge-output-format", "mp4",
-          "--match-filters", "!is_live & !was_live"
+          "--merge-output-format", "mp4"
         ]
       }
     },
